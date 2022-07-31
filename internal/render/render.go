@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/rezaDastrs/pkg/config"
-	"github.com/rezaDastrs/pkg/models"
+	"github.com/justinas/nosurf"
+	"github.com/rezaDastrs/internal/config"
+	"github.com/rezaDastrs/internal/models"
 )
 
 var functions = template.FuncMap{
@@ -23,11 +24,16 @@ func NewTemplates(a *config.AppConfig) {
 	app = a
 }
 
-func AddDefaultData(td *models.TemplateData) *models.TemplateData{
+func AddDefaultData(td *models.TemplateData, r *http.Request) *models.TemplateData {
+	//show alert
+	td.Flash = app.Session.PopString(r.Context(), "flash")
+	td.Error = app.Session.PopString(r.Context(), "error")
+	td.Warning = app.Session.PopString(r.Context(), "warning")
+	td.CSRFToken = nosurf.Token(r)
 	return td
 }
 
-func RenderTempl(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+func RenderTempl(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) {
 	var tc map[string]*template.Template
 	if app.UseCache {
 		//get template cache from AppConfig
@@ -44,12 +50,10 @@ func RenderTempl(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
 		log.Fatal("could not get template from template cache")
 	}
 
-	
 	//use without read from desk with buffer
 	buf := new(bytes.Buffer)
 
-
-	td =AddDefaultData(td)
+	td = AddDefaultData(td, r)
 	//hold information into bytes and read that from spesefic byte
 
 	_ = t.Execute(buf, td)
