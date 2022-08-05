@@ -20,7 +20,7 @@ var functions = template.FuncMap{
 var app *config.AppConfig
 
 //set the config for the template package
-func NewTemplates(a *config.AppConfig) {
+func NewRenderer(a *config.AppConfig) {
 	app = a
 }
 
@@ -33,7 +33,7 @@ func AddDefaultData(td *models.TemplateData, r *http.Request) *models.TemplateDa
 	return td
 }
 
-func RenderTempl(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) {
+func Templ(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) {
 	var tc map[string]*template.Template
 	if app.UseCache {
 		//get template cache from AppConfig
@@ -83,7 +83,7 @@ func CreateTemplateCache() (map[string]*template.Template, error) {
 		//get name of each page
 		name := filepath.Base(page)
 
-		fmt.Println("page is currently :", page)
+		// fmt.Println("page is currently :", page)
 
 		// render tmpl file with using additional function in top
 

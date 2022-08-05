@@ -2,14 +2,25 @@
 
 {{define "content"}}
     <div class="container">
+    {{$res := index .Data "reservation"}}
         <div class="row">
             <div class="col">
                 <h1 class="mt-3">Make Reservation</h1>
 
-                {{$res := index .Data "reservation"}}
+                <p>Reservation Detail<br>
+                Arrival : {{ index .StingMap "start_date"}}<br>
+                Departure : {{ index .StingMap "end_date"}}<br>
+                Room Name : {{$res.Room.RoomName}}
+                </p>                
 
                 <form method="post" action="" class="" novalidate>
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+
+                    <input type="hidden" name="start_date" value="{{index .StringMap "start_date"}}">
+                    <input type="hidden" name="end_date" value="{{index .StingMap "end_date"}}">
+                    <input type="hidden" name="room_id" value="{{$res.RoomID}}">
+
 
                     <div class="form-group mt-3">
                         <label for="first_name">First Name:</label>
