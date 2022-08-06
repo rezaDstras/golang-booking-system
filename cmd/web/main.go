@@ -22,12 +22,18 @@ var app config.AppConfig
 var session *scs.SessionManager
 
 func main() {
-	db ,err := run()
+	db, err := run()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.SQL.Close()
 
+	//close mail channel
+	defer close(app.MailChan)
+
+	fmt.Println("Start mail listener ...")
+	//call mail function
+	listenForMail()
 
 	fmt.Printf("starting application on prot %s", Port)
 	// _ = http.ListenAndServe(Port, nil)
@@ -40,13 +46,17 @@ func main() {
 	log.Fatal(err)
 }
 
-func run() (*driver.DB , error){
-	//define session 
+func run() (*driver.DB, error) {
+	//define session
 	gob.Register(models.User{})
 	gob.Register(models.Room{})
 	gob.Register(models.Reservation{})
 	gob.Register(models.Restriction{})
-	
+
+	//mail channel
+	mailChan := make(chan models.MailData) // defer close in main function
+	//config
+	app.MailChan = mailChan
 
 	//change this to true in production
 	app.InProduction = false
@@ -64,7 +74,7 @@ func run() (*driver.DB , error){
 
 	//conect to DB
 	log.Println("connecting to DB")
-	db ,err := driver.ConnectSQL("host=localhost port=5432 user=ehsan.d dbname=book password=")
+	db, err := driver.ConnectSQL("host=localhost port=5432 user=ehsan.d dbname=book password=")
 	if err != nil {
 		log.Fatal("connect to db error: ", err)
 	}
@@ -81,8 +91,8 @@ func run() (*driver.DB , error){
 
 	render.NewRenderer(&app)
 
-	repo := handlers.NewRepo(&app ,db)
+	repo := handlers.NewRepo(&app, db)
 	handlers.NewHandlers(repo)
-	
-	return db , nil
+
+	return db, nil
 }

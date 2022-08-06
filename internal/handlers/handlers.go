@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -168,6 +169,23 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 
 	//put results in session which is defined in first line of main.go
 	m.App.Session.Put(r.Context(), "resevation", reservation)
+
+	//Send Email Notification
+
+	htmlMsg := fmt.Sprintf(`
+	<strong>Reservation Confirmation</strong><br>
+	Dear : %s <br>
+	This is a Confirmation for your reservation from %s to %s.
+	`, reservation.FirstName, reservation.StartDate.Format("2006-01-02"), reservation.EndDate.Format("2006-01-02"))
+	msg := models.MailData{
+		To:      reservation.Email,
+		From:    "you@here.com",
+		Subject: "Reservation Confirmation",
+		Content: htmlMsg,
+	}
+
+	// pass msg to config
+	m.App.MailChan <- msg
 
 	//redirect after submit form
 	http.Redirect(w, r, "/reservation-summery", http.StatusSeeOther)
@@ -363,4 +381,62 @@ func (m *Repository) BookRoom(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/make-reservation", http.StatusSeeOther)
 
+}
+
+func (m *Repository) LoginPage(w http.ResponseWriter, r *http.Request) {
+	render.Templ(w, r, "login.page.tmpl", &models.TemplateData{
+		Form: forms.New(nil),
+	})
+}
+
+func (m *Repository) PostLoginPage(w http.ResponseWriter, r *http.Request) {
+	//remove token in session
+	_ = m.App.Session.RenewToken(r.Context())
+
+	//parse form
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+	}
+
+	//create form validate
+	form := forms.New(r.PostForm)
+	form.Required("email")
+	form.Required("password")
+	form.IsEmail("email")
+	if !form.Valid() {
+		render.Templ(w, r, "login.page.tmpl", &models.TemplateData{
+			Form: form,
+		})
+		return
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	id, _, err := m.DB.Authenticate(email, password)
+
+	if err != nil {
+		log.Println(err)
+
+		m.App.Session.Put(r.Context(), "error", "inavild login crediontials")
+		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	m.App.Session.Put(r.Context(), "flash", "logged in successfully")
+	m.App.Session.Put(r.Context(), "user_id", id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+}
+
+func (m *Repository) Logout(w http.ResponseWriter, r *http.Request) {
+	_ = m.App.Session.Destroy(r.Context())
+	_ = m.App.Session.RenewToken(r.Context())
+
+	http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+}
+
+func (m *Repository) AdminDashboard(w http.ResponseWriter, r *http.Request) {
+	render.Templ(w, r, "admin-dashboard.page.tmpl", &models.TemplateData{})
 }
