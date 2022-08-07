@@ -440,3 +440,28 @@ func (m *Repository) Logout(w http.ResponseWriter, r *http.Request) {
 func (m *Repository) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	render.Templ(w, r, "admin-dashboard.page.tmpl", &models.TemplateData{})
 }
+
+//Admin Panle
+func (m *Repository) AdminAllReservations(w http.ResponseWriter, r *http.Request) {
+
+	reservations, err := m.DB.AllReservations()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservations"] = reservations
+
+	render.Templ(w, r, "admin-all-reservation.page.tmpl", &models.TemplateData{
+		Data: data,
+	})
+}
+
+func (m *Repository) AdminNewReservations(w http.ResponseWriter, r *http.Request) {
+	render.Templ(w, r, "admin-new-reservation.page.tmpl", &models.TemplateData{})
+}
+
+func (m *Repository) AdminCalendarReservation(w http.ResponseWriter, r *http.Request) {
+	render.Templ(w, r, "admin-calendar-reservation.page.tmpl", &models.TemplateData{})
+}

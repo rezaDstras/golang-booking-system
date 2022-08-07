@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"text/template"
+	"time"
 
 	"github.com/justinas/nosurf"
 	"github.com/rezaDastrs/internal/config"
@@ -15,9 +16,14 @@ import (
 
 var functions = template.FuncMap{
 	//for pass additional data like cuurent year or format of date or ...
+	"humanDate": HumanDate,
 }
 
 var app *config.AppConfig
+
+func HumanDate(t time.Time) string {
+	return t.Format("02 jun 2006")
+}
 
 //set the config for the template package
 func NewRenderer(a *config.AppConfig) {
