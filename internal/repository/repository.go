@@ -18,4 +18,9 @@ type DatabaseRepo interface {
 
 	//admin Panel
 	AllReservations() ([]models.Reservation, error)
+	NewReservations() ([]models.Reservation, error)
+	GetReservationByID(id int) (models.Reservation, error)
+	UpdateReservation(r models.Reservation) error
+	DeleteReservation(id int) error
+	UpdateProcessedForReservation(id, processed int) error 
 }
