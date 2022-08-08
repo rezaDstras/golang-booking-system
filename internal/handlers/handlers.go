@@ -555,8 +555,8 @@ func (m *Repository) AdminProcessedReservation(w http.ResponseWriter, r *http.Re
 
 	_ = m.DB.UpdateProcessedForReservation(id, 1)
 
-	m.App.Session.Put(r.Context(),"flash","Reservation marked  as processed")
-	http.Redirect(w,r,fmt.Sprintf("/admin/reservations-%s",src),http.StatusSeeOther)
+	m.App.Session.Put(r.Context(), "flash", "Reservation marked  as processed")
+	http.Redirect(w, r, fmt.Sprintf("/admin/reservations-%s", src), http.StatusSeeOther)
 }
 
 func (m *Repository) AdminDeleteReservation(w http.ResponseWriter, r *http.Request) {
@@ -565,13 +565,106 @@ func (m *Repository) AdminDeleteReservation(w http.ResponseWriter, r *http.Reque
 
 	_ = m.DB.DeleteReservation(id)
 
-	m.App.Session.Put(r.Context(),"flash","Reservation marked  as processed")
-	http.Redirect(w,r,fmt.Sprintf("/admin/reservations-%s",src),http.StatusSeeOther)
+	m.App.Session.Put(r.Context(), "flash", "Reservation marked  as processed")
+	http.Redirect(w, r, fmt.Sprintf("/admin/reservations-%s", src), http.StatusSeeOther)
 }
-
 
 func (m *Repository) AdminCalendarReservation(w http.ResponseWriter, r *http.Request) {
-	render.Templ(w, r, "admin-calendar-reservation.page.tmpl", &models.TemplateData{})
+
+	// current time
+	now := time.Now()
+
+	//if url has parameter about last or first year / month
+	if r.URL.Query().Get("y") != "" {
+		year, _ := strconv.Atoi(r.URL.Query().Get("y"))
+		month, _ := strconv.Atoi(r.URL.Query().Get("m"))
+		//overwrite current time
+		now = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	}
+	//NEXT MONTH add 1 month
+	next := now.AddDate(0, 1, 0)
+	//previous month mines 1 month
+	last := now.AddDate(0, -1, 0)
+
+	//format next month and year
+	nextMonth := next.Format("01")
+	nextMonthYear := next.Format("2006")
+	//format last month & year
+	lastMonth := last.Format("01")
+	lastMonthYear := last.Format("2006")
+
+	stringMap := make(map[string]string)
+	stringMap["next_month"] = nextMonth
+	stringMap["next_month_year"] = nextMonthYear
+	stringMap["last_month"] = lastMonth
+	stringMap["last_month_year"] = lastMonthYear
+
+	stringMap["this_month"] = now.Format("01")
+	stringMap["this_month_year"] = now.Format("2006")
+
+	data := make(map[string]interface{})
+	data["now"] = now
+
+	//number of days in current month
+	//without return day _
+	currentYear, currentMonth, _ := now.Date()
+	currentLocation := now.Location()
+	firstOfMonth := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, currentLocation)
+
+	//for access to last day of monh =>add a month to curent monh and mine a day
+	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
+
+	intMap := make(map[string]int)
+	intMap["days_in_month"] = lastOfMonth.Day()
+
+	//Get All Rooms
+	rooms, err := m.DB.AllRooms()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data["rooms"] = rooms
+
+	//determine which days of month which room si block or empty for reservation
+	for _, x := range rooms {
+		//create empty reservation days of rooms
+		reservationMap := make(map[string]int)
+		blockMap := make(map[string]int)
+
+		//initialize days of month with 0
+		for d := firstOfMonth; d.After(lastOfMonth) == false; d = d.AddDate(0, 0, 1) {
+			reservationMap[d.Format("2006-01-2")] = 0
+			blockMap[d.Format("2006-01-2")] = 0
+		}
+
+		//get all restrictions for current room
+		restrictions, err := m.DB.GetRestrictionsForRoomByDate(x.Id, firstOfMonth, lastOfMonth)
+		if err != nil {
+			helpers.ServerError(w, err)
+			return
+		}
+		//check if is reserved or not
+		for _, y := range restrictions {
+			if y.ReservationID > 0 {
+				//it is a reservation
+				for d := y.StartDate; d.After(y.EndDate) == false; d = d.AddDate(0, 0, 1) {
+					reservationMap[d.Format("2006-01-2")] = y.ReservationID
+				}
+			} else {
+				//it is a bklock
+				blockMap[y.StartDate.Format("2006-01-2")] = y.Id
+			}
+		}
+		data[fmt.Sprintf("reservation_map_%d", x.Id)] = reservationMap
+		data[fmt.Sprintf("block_map_%d", x.Id)] = blockMap
+
+		//save block map for current month in session
+		m.App.Session.Put(r.Context(),fmt.Sprintf("block_map_%d",x.Id),blockMap)
+	}
+	render.Templ(w, r, "admin-calendar-reservation.page.tmpl", &models.TemplateData{
+		StringMap: stringMap,
+		Data:      data,
+		IntMap:    intMap,
+	})
 }
-
-

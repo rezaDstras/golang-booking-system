@@ -52,6 +52,8 @@ func run() (*driver.DB, error) {
 	gob.Register(models.Room{})
 	gob.Register(models.Reservation{})
 	gob.Register(models.Restriction{})
+	gob.Register(map[string]int{})
+
 
 	//mail channel
 	mailChan := make(chan models.MailData) // defer close in main function

@@ -17,12 +17,36 @@ import (
 var functions = template.FuncMap{
 	//for pass additional data like cuurent year or format of date or ...
 	"humanDate": HumanDate,
+	"formatDate": FormatDate,
+	"iterate": Iterate,
+	"add": Add,
 }
 
 var app *config.AppConfig
 
 func HumanDate(t time.Time) string {
 	return t.Format("02 jun 2006")
+}
+
+func Add(a ,b int) int {
+	return a + b
+}
+
+//Iterate returns a slice of integers starting 1, going to count
+func Iterate(count int) []int  {
+	var i int
+	var items []int
+
+	for i = 1; i <= count; i++ {
+		items = append(items, i)
+	}
+
+	return items
+}
+
+
+func FormatDate( t time.Time , f string) string{
+	return t.Format(f)
 }
 
 //set the config for the template package

@@ -471,3 +471,85 @@ func (m *postgressDBRepo) UpdateProcessedForReservation(id, processed int) error
 
 	return nil
 }
+
+func (m *postgressDBRepo) AllRooms() ([]models.Room, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var rooms []models.Room
+
+	query := `select id, room_name, created_at, updated_at from rooms order by room_name`
+
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return rooms, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var i models.Room
+
+		err := rows.Scan(
+			&i.Id,
+			&i.RoomName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		)
+
+		if err != nil {
+			return rooms, err
+		}
+
+		rooms = append(rooms, i)
+	}
+
+	if err = rows.Err(); err != nil {
+		return rooms, err
+	}
+
+	return rooms, nil
+
+}
+
+func (m *postgressDBRepo) GetRestrictionsForRoomByDate(roomID int, start, end time.Time) ([]models.RoomRestriction, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var restrictions []models.RoomRestriction
+
+	//if reservation id is null => give default 0 value
+
+	query := `select id, coalesce (reservation_id, 0), restriction_id, room_id, start_date, end_date from room_restrictions where $1 < end_date and $2 > start_date and room_id = $3`
+
+	rows, err := m.DB.QueryContext(ctx, query, end, start, roomID)
+	if err != nil {
+		return restrictions, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var i models.RoomRestriction
+
+		err := rows.Scan(
+			&i.Id,
+			&i.ReservationID,
+			&i.RestictionID,
+			&i.RoomID,
+			&i.StartDate,
+			&i.EndDate,
+		)
+		if err != nil {
+			return restrictions, err
+		}
+
+		restrictions = append(restrictions, i)
+	}
+	if err = rows.Err(); err != nil {
+		if err != nil {
+			return restrictions, err
+		}
+	}
+	return restrictions, nil
+}
